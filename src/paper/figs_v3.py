@@ -41,6 +41,25 @@ mpl.rcParams.update({
 })
 
 
+import os  # noqa: E402
+
+DOCX = os.environ.get("FIG_DOCX") == "1"
+if DOCX:
+    # Word review copy (single column, figures at 5.8 in / 6.3 in as in the authors' reference manuscript): the canvas
+    # is enlarged so that, printed at that width, text is about 10 pt instead of the 13 pt a plain stretch would give.
+    OUT = OUT / "docx"
+    _subplots = plt.subplots
+
+    def _scaled_subplots(*a, figsize=None, **kw):
+        if figsize is not None:
+            if figsize[0] <= COL + 1e-9:
+                figsize = (figsize[0] * 1.3, figsize[1] * 1.3)
+            else:  # full-width schematic: narrower canvas, printed at 6.3 in, so its labels print near 9 pt
+                figsize = (figsize[0] * 0.62, figsize[1] * 1.15)
+        return _subplots(*a, figsize=figsize, **kw)
+    plt.subplots = _scaled_subplots
+
+
 def line(ax, x, y, key, **kw):
     lab, c, mk, ls = M[key]
     return ax.plot(x, y, color=c, marker=mk, ls=ls, label=lab, markeredgecolor="white", markeredgewidth=0.4, **kw)[0]

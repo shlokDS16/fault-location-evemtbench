@@ -181,18 +181,19 @@ def render_snippets(tex, preamble_extra):
         n = lab[lm.group(1)] if lm else "?"
         k = len(snippets)
         snippets.append(("alg", n, body))
-        return f"\n\n\\begin{{figure}}\\centering\\includegraphics[width=3.5in]{{snip{k}.png}}\\end{{figure}}\n\n"
+        return f"\n\n\\begin{{figure}}\\centering\\includegraphics[width=SNIPWIDTH{k}in]{{snip{k}.png}}\\end{{figure}}\n\n"
 
     def tikz_rep(g):
         k = len(snippets)
         snippets.append(("tikz", None, g.group(0)))
-        return f"\\includegraphics[width=3.5in]{{snip{k}.png}}"
+        return f"\\includegraphics[width=SNIPWIDTH{k}in]{{snip{k}.png}}"
 
     tex = alg_pat.sub(alg_rep, tex)
     tex = tikz_pat.sub(tikz_rep, tex)
     for k, (kind, n, body) in enumerate(snippets):
         if kind == "alg":
-            doc = ("\\documentclass[10pt]{article}\n\\usepackage[paperwidth=4in,paperheight=10in,margin=0.15in]"
+            # full text width of the reference layout (5.8 in) and 11 pt type, so the box prints at the body size
+            doc = ("\\documentclass[11pt]{article}\n\\usepackage[paperwidth=6.1in,paperheight=10in,margin=0.15in]"
                    "{geometry}\n" + preamble_keep() + preamble_extra + "\\pagestyle{empty}\n\\begin{document}\n"
                    f"\\setcounter{{algocf}}{{{int(n) - 1}}}\n\\begin{{algorithm}}[H]{body}\\end{{algorithm}}\n"
                    "\\end{document}\n")
@@ -213,7 +214,12 @@ def render_snippets(tex, preamble_extra):
         for r_ in rects[1:]:
             clip |= r_
         clip = (clip + (-4, -4, 4, 4)) & page.rect
+        if kind == "alg":  # every algorithm box spans the full 5.8 in text width
+            clip = fitz.Rect(page.rect.x0 + 0.15 * 72 - 2, clip.y0, page.rect.x1 - 0.15 * 72 + 2, clip.y1)
         page.get_pixmap(dpi=300, clip=clip).save(BUILD / f"snip{k}.png")
+        natural = clip.width / 72.0  # inches at the size it was typeset
+        width = natural if kind == "alg" else min(5.0, natural * 1.65)
+        tex = tex.replace(f"SNIPWIDTH{k}in", f"{width:.2f}in")
     return tex
 
 
@@ -308,9 +314,10 @@ def to_pandoc_latex(tex, mac):
     body = re.sub(r"\\shortstack\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}", lambda g: g.group(1).replace("\\\\", " "), body)
     body = re.sub(r"\\(begin|end)\{(table|figure)\*\}", r"\\\1{\2}", body)
     record_rules(body)
-    body = body.replace("{figs/", "{../figs/").replace(".pdf}", ".png}")
+    # Word figures: the enlarged renders of src/paper/figs_v3.py (FIG_DOCX=1) in paper/figs/docx/
+    body = body.replace("{figs/", "{../figs/docx/").replace(".pdf}", ".png}")
     # figures at their print width: one column 3.5 in, full width = the 6.5 in text block of the docx
-    body = body.replace("width=\\columnwidth", "width=3.5in").replace("width=\\textwidth", "width=6.5in")
+    body = body.replace("width=\\columnwidth", "width=5.8in").replace("width=\\textwidth", "width=6.3in")
     # numbered display equations: append the number (Word equations carry no automatic numbers)
 
     def eqnum(g):
@@ -373,6 +380,8 @@ def postprocess(path):
             p.style = d.styles["Bibliography"]
         if p.style.name == "Image Caption" and "Figure Caption" in names:
             p.style = d.styles["Figure Caption"]
+        if p.style.name == "Captioned Figure" and "Figure" in names:  # image paragraph spacing of the reference
+            p.style = d.styles["Figure"]
     # three-line tables as in the reference: 1.5 pt rule on top and bottom, 0.75 pt rule under the header and
     # between row groups (the LaTeX \midrule positions), no vertical or inner lines
     if len(TABLE_RULES) != len(d.tables):
