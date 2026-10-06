@@ -1,0 +1,12 @@
+table,n,guarded,changed,guarded_1phg_incipient,guarded_1phg_incipient_w_arc,guarded_1phg_shc,guarded_1phg_shc_w_arc,guarded_2ph_shc,guarded_2phg_shc,guarded_3ph_shc,guarded_1phg_hif,guarded_1phg_hif_w_arc
+c1_local_feats,14640,5722,5722,0,0,0,0,2842,0,2880,,
+c1_local_feats_SNR30,14640,1,1,0,0,0,0,1,0,0,,
+c1_local_feats_SNR40,14640,3,3,0,0,0,0,0,0,3,,
+c1_local_feats_TestGrid110kV,32940,12960,12960,11,14,0,0,6455,0,6480,,
+c1_local_feats_TestGrid110kV_SNR30,32940,1,1,0,0,0,0,0,0,1,,
+c1_local_feats_TestGrid110kV_SNR40,32940,7,7,0,0,0,0,2,0,5,,
+c1_grid_DL,14640,5722,5722,0,0,0,0,2842,0,2880,,
+c1_grid_TG,32940,12960,12960,11,14,0,0,6455,0,6480,,
+c1_grid_MV,56340,17449,17449,21,18,0,0,8770,0,8640,0.0,0.0
+c1_grid_MV_zid,56340,17449,17449,21,18,0,0,8770,0,8640,0.0,0.0
+c1_adapt_tokens,37143,11626,11626,637,663,5,12,5328,5,4976,,

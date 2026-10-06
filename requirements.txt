@@ -1,0 +1,10 @@
+# Versions used for every result in the paper (Python 3.14.3, Windows 11, one NVIDIA RTX 5070 Ti laptop GPU)
+numpy==2.4.2
+pandas==2.3.3
+scipy==1.17.1
+scikit-learn==1.8.0
+torch==2.11.0
+pyarrow==25.0.1
+matplotlib==3.10.8
+numba==0.64.0
+networkx==3.6.1

@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this code or these results, please cite the paper and this archive."
+title: "Code and results: where learning helps in impedance-based fault location"
+authors:
+  - family-names: Goenka
+    given-names: Shlok
+    affiliation: "School of Computer Science and Engineering, Vellore Institute of Technology, Vellore, India"
+    email: shlok.goenka2023@vitstudent.ac.in
+  - family-names: Khekare
+    given-names: Ganesh
+    affiliation: "School of Computer Science and Engineering, Vellore Institute of Technology, Vellore, India"
+    email: ganesh.khekare@vit.ac.in
+license: MIT
+date-released: 2026-10-06
+keywords:
+  - fault location
+  - impedance-based methods
+  - machine learning
+  - EvEMTBench

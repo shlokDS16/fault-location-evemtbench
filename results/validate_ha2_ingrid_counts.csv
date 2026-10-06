@@ -1,0 +1,17 @@
+,value
+bench_all_fault_episodes,1077
+bench_all_fault_windows,16980
+bench_line_episodes,924
+bench_line_windows,14640
+bench_rule_eq_cached_windows,True
+split_sizes,train 6999 val 1500 test 1500
+splits_disjoint,True
+adapt_test_all_fault_episodes,701
+adapt_test_all_fault_windows,11674
+adapt_test_line_episodes,411
+adapt_test_line_windows,6883
+adapt_train_all_fault_episodes,3266
+adapt_train_all_fault_windows,54005
+adapt_train_line_episodes,1832
+adapt_train_line_windows,30260
+adapt_bus_faults_with_location,2030
