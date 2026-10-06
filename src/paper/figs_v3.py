@@ -147,7 +147,7 @@ def fig_dreq():
     w = pd.read_parquet(R / "c1_cond_windows.parquet")
     rho = np.logspace(-2, 2.5, 400)
     eps = 0.05
-    fig, axs = plt.subplots(2, 1, figsize=(COL, 2.9), sharex=True, gridspec_kw=dict(height_ratios=[1.7, 1]))
+    fig, axs = plt.subplots(2, 1, figsize=(COL, 2.6), sharex=True, gridspec_kw=dict(height_ratios=[1.7, 1]))
     ax = axs[0]
     for kap, ls, lab in ((0.5, ":", r"$\kappa=0.5$"), (1.0, "-", r"$\kappa=1$"), (2.0, "--", r"$\kappa=2$")):
         d = np.degrees(np.arcsin(np.minimum(1, eps / (rho * kap))))
@@ -166,7 +166,7 @@ def fig_dreq():
                       "MV": (1.0, 2.2, "center")}[g]
         ax.text(r50 * dx, a50 * dy, {"ADAPT": "DL-adapt", "MV": "CIGRE MV"}.get(g, g), color=c, fontsize=6.5,
                 ha=ha, va="center", zorder=4)
-    ax.set(xscale="log", yscale="log", ylim=(0.02, 90), ylabel="Angle accuracy or error (deg)")
+    ax.set(xscale="log", yscale="log", ylim=(0.02, 90), ylabel="Angle (deg)")
     ax.set_title("(a) required accuracy (lines) vs Takagi's angle error (markers)", loc="left", pad=2)
     ax.legend(loc="lower left", handletextpad=0.3, fontsize=6.5, borderaxespad=0.1, handlelength=1.8)
     ax = axs[1]
@@ -196,7 +196,7 @@ def fig_types():
     a = pd.read_csv(R / "c1_adapt_td.csv")
     a = a[a.split == "test"]
     sets["ADAPT"] = a.err.groupby(a.etype).mean()
-    fig, ax = plt.subplots(figsize=(COL, 2.2))
+    fig, ax = plt.subplots(figsize=(COL, 2.0))
     ys = np.arange(len(TYPES))[::-1]
     order = ("DL", "TG", "ADAPT", "MV", "MV_zid")
     off = np.linspace(0.28, -0.28, len(order))
@@ -224,7 +224,7 @@ def fig_time():
     d["t"] = d.t.astype(int)
     cols = [("two", "two-ended"), ("ha2", "H-A2"), ("E", "Eriksson"), ("T", "Takagi"), ("R", "reactance"),
             ("gru", "GRU+Z")]
-    fig, axs = plt.subplots(2, 1, figsize=(COL, 3.7), sharex=True)
+    fig, axs = plt.subplots(2, 1, figsize=(COL, 3.25), sharex=True)
     for ax, dirn, ttl in zip(axs, ("TG_to_DL", "DL_to_TG"), ("(a) trained on TestGrid, tested on DoubleLine",
                                                               "(b) trained on DoubleLine, tested on TestGrid")):
         g = d[d.direction == dirn]
@@ -265,7 +265,7 @@ def fig_cond():
     ax.set_title("(a) model check", loc="left", pad=2)
     ax = axs[1]
     order = ["(0.0, 0.3]", "(0.3, 1.0]", "(1.0, 3.0]", "(3.0, 10.0]", "(10.0, 30.0]", "(30.0, 1000000000.0]"]
-    labs = ["$\\leq$0.3", "0.3–1", "1–3", "3–10", "10–30", ">30"]
+    labs = ["$\\leq$0.3", "(0.3, 1]", "(1, 3]", "(3, 10]", "(10, 30]", ">30"]
     mv = b[b.grid == "MV"]
     for k, m in (("two", "two-ended"), ("E", "E"), ("R", "R"), ("ha2", "H-A2")):
         s = mv[mv.method == m].set_index("rho_bin").reindex(order)

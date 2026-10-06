@@ -89,6 +89,16 @@ PREFIX = {"fig": ("Fig.", "Figs."), "tab": ("Table", "Tables"), "sec": ("Section
           "alg": ("Algorithm", "Algorithms"), "eq": ("", "")}
 
 
+ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
+
+
+def sec_arabic(n):
+    """IEEE section label 'VI-B' -> '6.2', 'III' -> '3'."""
+    part = n.split("-")
+    s = str(ROMAN.index(part[0]) + 1)
+    return s + (f".{ord(part[1]) - 64}" if len(part) > 1 else "")
+
+
 def join(items):
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
 
@@ -106,8 +116,8 @@ def resolve_refs(tex, lab):
         if kind == "eq":
             return ("Eq. " if len(nums) == 1 else "Eqs. ") + join([f"({n})" for n in nums])
         sing, plur = PREFIX.get(kind, ("", ""))
-        if kind == "sec":
-            nums = [n for n in nums]
+        if kind == "sec":  # the docx numbers headings 1., 1.1. (as the eTransportation reference), not I., I-A
+            nums = [sec_arabic(n) for n in nums]
         return (sing if len(nums) == 1 else plur) + "~" + join(nums)
 
     tex = re.sub(r"\\(cref|Cref)\{([^}]*)\}", cref, tex)
@@ -121,14 +131,7 @@ def resolve_cites(tex, order):
 
     def cite(g):
         ns = sorted(num[k.strip()] for k in g.group(1).split(","))
-        out, i = [], 0
-        while i < len(ns):
-            j = i
-            while j + 1 < len(ns) and ns[j + 1] == ns[j] + 1:
-                j += 1
-            out.append(f"[{ns[i]}]" if j == i else (f"[{ns[i]}], [{ns[j]}]" if j == i + 1 else f"[{ns[i]}]--[{ns[j]}]"))
-            i = j + 1
-        return ", ".join(out)
+        return ", ".join(f"[{n}]" for n in ns)  # no dashed ranges (matches \usepackage[nocompress]{cite})
 
     return re.sub(r"\\cite\{([^}]*)\}", cite, tex)
 
@@ -143,7 +146,7 @@ def bibliography_tex():
         it = re.sub(r"\\hskip[^\\]*\\relax", " ", it)
         it = it.replace("\\newblock", " ")
         it = re.sub(r"\\bibinfo\{[^}]*\}", "", it)
-        it = re.sub(r"\s+", " ", it).strip()
+        it = re.sub(r"\s+", " ", it).strip().replace("--", "-")  # page ranges with a hyphen, no en dash
         out.append(f"[{i}]~{it}\n")
     return "\n\n".join(out)
 
@@ -227,20 +230,25 @@ def to_pandoc_latex(tex, mac):
         notes = []  # \thanks footnotes of the author block (e.g. the AI-use note) as small paragraphs
         for t in re.finditer(r"\\thanks\{", block):
             notes.append(block[t.end():balanced(block, t.end() - 1) - 1])
-        names = re.sub(r"\\thanks\{.*", "", block[len("\\author{"):], flags=re.S).replace("~", " ").strip("% \n")
+        # front matter laid out as in the eTransportation reference (styles applied in postprocess via markers)
+        ai_note = " ".join(n.strip() for n in notes if "AI system" in n)
         body = body[:am.start()] + (
-            f"\\begin{{center}}{names}\\end{{center}}\n\n"
-            + "".join(f"\\noindent\\emph{{{n.strip()}}}\n\n" for n in notes)) + body[end:]
+            f"ZZTITLE {title}\n\n"
+            "ZZAUTHOR Shlok Goenka\\textsuperscript{a}, Ganesh Khekare\\textsuperscript{a,*}\n\n"
+            "ZZAFFIL \\textsuperscript{a}School of Computer Science and Engineering, Vellore Institute of Technology, "
+            "Vellore, 632014, Tamil Nadu, India\n\n"
+            "ZZNOTE *Corresponding author. E-mail addresses: shlok.goenka2023@vitstudent.ac.in (S. Goenka), "
+            f"ganesh.khekare@vit.ac.in (G. Khekare). {ai_note}\n\n") + body[end:]
     body = re.sub(r"\\markboth\{.*?\}\{.*?\}\n", "", body)
     body = body.replace("\\maketitle", "")
     body = re.sub(r"\\IEEEPARstart\{(\w)\}\{(\w*)\}", r"\1\2", body)
     body = re.sub(r"\\begin\{IEEEkeywords\}(.*?)\\end\{IEEEkeywords\}",
-                  r"\\noindent\\emph{Index Terms}---\1", body, flags=re.S)
+                  lambda g: "ZZKEYS Keywords: " + "; ".join(k.strip().rstrip(".") for k in g.group(1).split(","))
+                  + "\n\n", body, flags=re.S)
     # abstract in place (pandoc would move it to the top as metadata)
     body = re.sub(r"\\begin\{abstract\}(.*?)\\end\{abstract\}",
-                  r"\\noindent\\textbf{Abstract}---\1", body, flags=re.S)
-    # IEEE heading numbers: I., II. for sections, A., B. for subsections
-    roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
+                  r"\\section*{Abstract}\n\nZZABSTRACT \1", body, flags=re.S)
+    # heading numbers as in the reference: 1., 2. for sections and 2.1., 2.2. for subsections
     cnt = {"s": 0, "ss": 0}
 
     def head(g):
@@ -250,9 +258,9 @@ def to_pandoc_latex(tex, mac):
         if kind == "section":
             cnt["s"] += 1
             cnt["ss"] = 0
-            return f"\\section*{{{roman[cnt['s'] - 1]}. {text}}}"
+            return f"\\section*{{{cnt['s']}. {text}}}"
         cnt["ss"] += 1
-        return f"\\subsection*{{{chr(64 + cnt['ss'])}. {text}}}"
+        return f"\\subsection*{{{cnt['s']}.{cnt['ss']}. {text}}}"
     body = re.sub(r"\\(section|subsection)(\*?)\{([^}]*)\}", head, body)
     body = re.sub(r"\\bibliographystyle\{[^}]*\}", "", body)
     body = re.sub(r"\\bibliography\{[^}]*\}", lambda g: bibliography_tex(), body)
@@ -270,7 +278,7 @@ def to_pandoc_latex(tex, mac):
             return blk.replace("\\caption{", f"\\caption{{{word} {n}. ", 1)
         return f
     body = re.sub(r"\\begin\{figure\*?\}.*?\\end\{figure\*?\}", cap("figure", "Fig.", False), body, flags=re.S)
-    body = re.sub(r"\\begin\{table\*?\}.*?\\end\{table\*?\}", cap("table", "TABLE", True), body, flags=re.S)
+    body = re.sub(r"\\begin\{table\*?\}.*?\\end\{table\*?\}", cap("table", "Table", True), body, flags=re.S)
     # constructs pandoc's LaTeX reader does not handle in tables (\quad before a number swallows the number)
     body = re.sub(r"\\begin\{tabular\}.*?\\end\{tabular\}",
                   lambda g: re.sub(r"\\cmidrule(\([a-z]*\))?\{[^}]*\}", "",
@@ -294,53 +302,48 @@ def to_pandoc_latex(tex, mac):
             return "\\[\\begin{aligned}" + inner.strip() + "\\end{aligned}" + tag + "\\]"
         return "\\[" + inner.strip() + tag + "\\]"
     body = re.sub(r"\\begin\{(equation|align)\}(.*?)\\end\{\1\}", eqnum, body, flags=re.S)
-    head = ("\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n"
-            f"\\begin{{center}}\\textbf{{{title}}}\\end{{center}}\n")
+    head = "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n"
     return head + body + "\n\\end{document}\n"
 
 
 def postprocess(path):
+    """Styles of the eTransportation reference (page, fonts, headings come from it via --reference-doc); no line
+    numbers, no footer. Front-matter paragraphs are found by their markers and given the reference's styles."""
     d = Document(path)
-    for s in d.sections:
-        s.left_margin = s.right_margin = Inches(1.0)
-        s.top_margin = s.bottom_margin = Inches(1.0)
-        ln = OxmlElement("w:lnNumType")
-        ln.set(qn("w:countBy"), "1")
-        ln.set(qn("w:restart"), "continuous")
-        ln.set(qn("w:distance"), "300")
-        s._sectPr.append(ln)
-        fp = s.footer.paragraphs[0]
-        fp.text = "Review copy for the corresponding author (single column). The journal version is the IEEEtran PDF."
-        fp.runs[0].font.size = Pt(8)
-    for st in d.styles:
-        try:
-            if st.font is not None:
-                st.font.name = "Times New Roman"
-        except (AttributeError, ValueError):
-            pass
+    names = {s.name for s in d.styles}
+    marks = {"ZZTITLE ": "Title", "ZZAUTHOR ": "Author", "ZZAFFIL ": "Affiliation", "ZZNOTE ": "Author Note",
+             "ZZABSTRACT ": "Abstract", "ZZKEYS ": "Keywords"}
+    in_refs = False
+    for p in d.paragraphs:
+        for m, style in marks.items():
+            if p.text.startswith(m):
+                for r in p.runs:
+                    if m.strip() in r.text:
+                        r.text = r.text.replace(m, "").replace(m.strip(), "")
+                        break
+                for r in p.runs:  # strip the space left by the marker from the first non-empty run
+                    if r.text.strip():
+                        r.text = r.text.lstrip()
+                        break
+                    r.text = ""
+                if style in names:
+                    p.style = d.styles[style]
+        if p.style.name.startswith("Heading"):
+            in_refs = p.text.strip() == "References"
+        elif in_refs and p.text.strip() and "Bibliography" in names:
+            p.style = d.styles["Bibliography"]
+        if p.style.name == "Image Caption" and "Figure Caption" in names:
+            p.style = d.styles["Figure Caption"]
+    for t in d.tables:  # wide tables (Table I: 8 columns) in a smaller font so header words do not break
+        if len(t.columns) >= 7:
+            for row in t.rows:
+                for c in row.cells:
+                    for par in c.paragraphs:
+                        for r in par.runs:
+                            r.font.size = Pt(8.5)
     d.core_properties.title = ("Where Learning Helps in Impedance-Based Fault Location: An Equal-Information Evaluation "
-                               "on an Open EMT Benchmark (review copy)")
+                               "on an Open EMT Benchmark")
     d.core_properties.author = "Shlok Goenka; Ganesh Khekare"
-    d.styles["Normal"].font.size = Pt(11)
-    for name, size in (("Heading 1", 13), ("Heading 2", 11.5), ("Heading 3", 11)):
-        if name in [s.name for s in d.styles]:
-            st = d.styles[name]
-            st.font.size = Pt(size)
-            st.font.bold = True
-            st.font.italic = name != "Heading 1"
-            st.font.color.rgb = None
-            rpr = st.element.get_or_add_rPr()
-            for tag in ("w:rFonts",):
-                for el in rpr.findall(qn(tag)):
-                    rpr.remove(el)
-            f = OxmlElement("w:rFonts")
-            for a in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
-                f.set(qn(a), "Times New Roman")
-            rpr.append(f)
-            for el in rpr.findall(qn("w:color")):
-                rpr.remove(el)
-    for t in d.tables:
-        t.style = d.styles["Table Grid"] if "Table Grid" in [s.name for s in d.styles] else t.style
     d.save(path)
 
 
@@ -355,12 +358,8 @@ def main():
     src = to_pandoc_latex(tex, mac)
     BUILD.mkdir(parents=True, exist_ok=True)
     (BUILD / "review.tex").write_text(src, encoding="utf-8")
-    ref = BUILD / "reference.docx"
-    if not ref.exists():
-        with open(ref, "wb") as fh:
-            fh.write(subprocess.run(["pandoc", "-o", "-", "--print-default-data-file", "reference.docx"],
-                                    capture_output=True).stdout)
-    r = subprocess.run(["pandoc", "review.tex", "-f", "latex", "-t", "docx", "-o", str(OUT),
+    ref = ROOT / "submission" / "manuscript_eTransportation.docx"  # style and page reference chosen by the authors
+    r = subprocess.run(["pandoc", "review.tex", "-f", "latex", "-t", "docx", "-o", str(OUT), "--reference-doc", str(ref),
                         "--resource-path", str(BUILD)], cwd=BUILD, capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(r.stderr)
