@@ -18,7 +18,8 @@ RESULTS = ["c1_ha2_eval.csv", "c1_ha2_noise.csv", "c1_adapt_ingrid.csv", "c1_zs_
            "c1_fig4_data.csv", "c1_review_checks.csv", "c1_review_phasor_bytime.csv", "c1_review_suonan.csv",
            "c1_review_sync_us.csv", "c1_i0_guard_patch.csv", "c1_i0_guard_check.csv", "c1_equal_info_preds_check.csv",
            "validate_ha2_ingrid_counts.csv", "validate_ha2_guard_oldnew.csv", "validate_ha2_neural_runs.csv",
-           "validate_ha2_ingrid_neural_summary.csv"]
+           "validate_ha2_ingrid_neural_summary.csv", "c1_revamp_stats.csv", "c1_runtime.csv",
+           "validate_ha2_part9_summary.csv", "validate_ha2_part9cmp.csv"]
 DOCS = {"claudedocs/c1_hybrid_design.md": "preregistration_log.md", "research/C1_GATE.md": "results_ledger.md",
         "research/VALIDATION_HA2.md": "independent_validation.md"}
 

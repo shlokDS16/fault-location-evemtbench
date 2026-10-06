@@ -84,10 +84,17 @@ python src/c1/conditioning.py
 python src/c1/fig4_data.py
 python src/c1/review_checks.py
 python src/c1/sync_subsample.py
-# 7. numbers and figures of the paper
+# 7. confidence intervals, errors in metres, Eriksson on defined windows, switch rule; indicative runtime
+python src/c1/revamp_stats.py
+python src/c1/runtime.py
+# 8. numbers, figures and the Word review copy of the paper
+python src/paper/grid_topology.py
 python src/paper/make_macros.py
-python src/paper/figs.py
+python src/paper/figs_v3.py
+python src/paper/build_docx.py
 ```
+`make_macros.py` also reads `results/validate_ha2_part9_summary.csv` from the independent re-implementation: the paper
+quotes the lower of the two implementations' confidence bounds for the gain of the physics-feature learner.
 
 Each script states its inputs and outputs in its docstring. Every learner takes an explicit allow-list of 77 input
 columns (`src/c1/tokens_core.py`); no label, fault type or remote-end quantity reaches it. The results ledger lists

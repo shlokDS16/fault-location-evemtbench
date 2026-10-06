@@ -510,3 +510,34 @@ A3 CORRECTED (design 19a; src/c1/ablation_a3_fix.py, results/c1_ablation_a3_fixe
 tokens: TG->DL 7.84, DL->TG 9.95, DL+TG->MV 27.27 % (H-A2 per-unit: 7.69 / 10.52 / 32.60). Matches validator part 8
 (7.88 / 9.90). => per-unit normalisation does NOT help; on MV it HURTS (27.3 vs 32.6; ohm variant below the 30.35 %
 majority level but above Eriksson 23.75). Paper: state this; no normalisation claim. Old A3 values (9.79/10.19/29.53) INVALID.
+
+## REVAMP ANALYSES (design 25, report-only) - 2026-10-06 S6 [pending validation, validator part 9]
+Scripts src/c1/revamp_stats.py -> results/c1_revamp_stats.csv; src/c1/runtime.py -> results/c1_runtime.csv; macros
+src/paper/macros_revamp.py. All point MAEs reproduce the paper macros exactly (two-ended 0.61 / 0.41 / 4.00 / 1.80 id /
+6.15 adapt; E 10.55 / 8.83 / 23.75 / 16.13; H-A2 7.69 / 10.52 / 32.60 / 11.98 in-grid adapt; eq 11.42 / 16.20).
+(a) Episode bootstrap 95 % CI (B 2,000): two-ended DL [0.54, 0.69], TG [0.38, 0.44], MV [3.75, 4.27], MV id [1.66, 1.96],
+    adapt [5.02, 7.41]; E DL [9.92, 11.17], TG [8.58, 9.13], MV [23.16, 24.31], adapt [14.97, 17.43]; H-A2 DL [7.19, 8.19],
+    TG [10.07, 10.99], MV [31.79, 33.43], adapt [11.06, 12.95]; eq DL [10.83, 12.04], TG [15.49, 16.94].
+    Paired reduction H-A2 vs best eq (lead point): TG->DL 33 % [28, 37], DL->TG 35 % [32, 38] -> significant.
+(b) Metres (mean / P95): two-ended DL 159 / 830 m, TG 121 / 513 m, MV 69 / 280 m, MV id 33 / 100 m, adapt 1,655 / 9,655 m;
+    E DL 3.1 km, TG 2.8 km, MV 396 m; H-A2 DL 2.3 km, TG 3.3 km, MV 501 m. P95 (%): two-ended 3.2 / 1.8 / 14.3 (MV).
+(c) Eriksson on defined windows: DL 6.73 % (coverage 84 %), TG 5.99 (87 %), adapt 11.28 (64 %), MV 15.87 (44 %);
+    windows <= 15 ms: 32.20 / 31.63 / 32.58 / 36.10 % at 48 / 49 / 37 / 8 % coverage -> Eriksson's sub-cycle failure is
+    NOT a scoring artefact; >= 20 ms: 3.63 / 2.92 / 8.34 / 15.12 % at 93 / 96 / 71 / 53 %.
+(d) EXPLORATORY switch (H-A2 < 20 ms, Eriksson where defined after): TG->DL 5.75 [5.32, 6.21], DL->TG 5.49 [5.27, 5.74]
+    (better than either component on 110 kV), adapt 12.67 (worse than H-A2 11.98), MV 27.22.
+(e) Runtime (indicative, 1 core, Intel Core Ultra 9 275HX, Python): two-ended TD 0.12 ms/window; 77 local features
+    0.64 ms; classical one-ended (5 methods) 0.21 ms; H-A2 inference 0.18 ms (batch); H-A2 training on TG 32 s (3 models).
+[V] REVAMP ANALYSES VALIDATED (validator part 9, research/VALIDATION_HA2.md 'Part 9'; frozen 14:01:40): all point values
+and CIs within tolerance (largest CI excess 0.13 pp). DEFECT fixed: revamp_stats used 17.5 ms bin edges / switch point
+instead of the registered <= 15 / >= 20 ms (adapt only; DL/TG/MV on the 5 ms grid unaffected). Re-run: adapt Eriksson
+<= 15 ms 33.37 % (coverage 36 %), >= 20 ms 7.91 % (71 %) = validator exactly; adapt switch 12.51 (validator 12.53).
+Also fixed: lengths() now DoubleLine-only (was correct by order); row-count asserts added.
+Gain H-A2 vs best eq (validator): 29.7 % [24.8, 34.2] TG->DL, 33.5 % [30.6, 36.2] DL->TG; lead 32.7 / 35.1 %.
+REPORT: conservative gains 30 / 33 % (gainC*), CI lower bound >= 25 / 31 % in both implementations (macros redC*lo).
+Disclose: MV Eriksson coverage 44 % incl. MainLn8-14 (no remote end; 47 % on the 14 two-ended sections); Eriksson P95 49 %
+= the 0.5 fallback; identified Z on MV = R1 and X1 identified (R1 only: 1.81).
+[V] MV ABLATIONS VALIDATED (validator part 10, VALIDATION_HA2.md 'Part 10'; frozen 14:51:32): A3 ohm features DL+TG->MV
+validator 27.43 vs lead 27.27 (+0.16 pp, float32 vs 5-digit Z); A1 raw-window boosting 38.85 = 38.85 (bit-identical).
+SUPERSEDED: results/c1_zs_MV.csv row A3_unnormalised = 29.53 (old clipped definition) -> never quote; paper uses
+c1_ablation_a3_fixed.csv (27.27). Disclose: A1 on MV is a near-constant predictor (~0.83), worse than predicting 0.5.

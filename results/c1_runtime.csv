@@ -1,0 +1,6 @@
+item,ms_per_window,windows,cpu,threads
+two-ended TD estimate,0.11949549996643327,800,"Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",1
+77 local features,0.6353806250263005,800,"Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",1
+"classical one-ended (R, T, T2, MT, E)",0.20848650005063973,800,"Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",1
+"H-A2 inference (3 models, batch)",0.17960049180807597,14640,"Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",1
+"H-A2 training on TG (3 models), s",31.81845279992558,32940,"Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",1

@@ -1250,3 +1250,180 @@ Files:
   A3_ohm_{DL,TG}.parquet, mv_windows.npz, frozen.sha256}`, `validate_ha2_nnpred_*_DLTGtoMV_s*.npy` and the logs
   `validate_ha2_part8{,_nn_mv,_abl}.log`
 - after the freeze: `results/validate_ha2_part8cmp_diag.csv`, `validate_ha2_part8cmp.log`
+
+---
+
+## Part 9: revamp statistics (design 25 a-d)
+Spec: `claudedocs/validator_spec_part9.md`. Code (`src/validate_ha2/`): `part9_mvzid.py` (regenerates the per-window MV
+two-ended TD with identified Z1, which part 4 kept only as a summary), `part9.py` (a-d), `freeze_part9.py`,
+`compare_part9.py` (after the freeze). CPU only, 6 workers, no retraining.
+
+Independence: frozen at **2026-10-06 14:01:40 +05:30** (`results/validate_ha2_part9_frozen.sha256`), before I opened
+`src/c1/revamp_stats.py` or `results/c1_revamp_stats.csv`. No lead per-window file was read: every input is my own.
+- two-ended TD: part-8 `td2e` (DL, TG, adapt test, MV 14 seg). MV identified Z: `part9_mvzid.py` (part-4 code), two
+  variants: identified R1 only (my part-4 diagnostic) and identified R1 and X1.
+- Eriksson: part-6 `E`, registered rule (NaN = no root in [-0.1, 1.1]).
+- H-A2: part-5 guarded 3-seed predictions (TG->DL, DL->TG, MV zero-shot, adapt in-grid).
+- Equal-information: part-1 npy (GRU+Z TG->DL, MLP+Z DL->TG), clipped, error averaged over the 3 seeds.
+- Bootstrap: B = 2,000 episode resamples, my own RNG (`default_rng(20261006)`), the same resamples for every method on
+  one window set (paired). MV one-ended rows are scored on all 56,340 windows against y_local.
+
+### Mine (frozen) against the lead. MAE in %, CI = 95 % episode bootstrap
+| set | method | mine MAE [CI] | lead MAE [CI] | delta | within tol. |
+|---|---|---|---|---|---|
+| DL | two-ended | 0.612 [0.544, 0.684] | 0.612 [0.543, 0.689] | 0.000 | yes |
+| DL | Eriksson | 10.546 [9.896, 11.189] | 10.546 [9.919, 11.170] | 0.000 | yes |
+| DL | H-A2 TG->DL | 7.754 [7.259, 8.291] | 7.689 [7.193, 8.188] | +0.065 | yes |
+| DL | GRU+Z | 11.035 [10.465, 11.619] | 11.425 [10.832, 12.043] | -0.389 | yes (neural) |
+| DL | 1 - H-A2/eq (%) | 29.7 [24.8, 34.2] | 32.7 [27.8, 37.2] | -3.0 | follows from eq |
+| DL | switch | 5.757 [5.343, 6.193] | 5.754 [5.318, 6.208] | +0.004 | yes |
+| TG | two-ended | 0.411 [0.383, 0.439] | 0.411 [0.384, 0.441] | 0.000 | yes |
+| TG | Eriksson | 8.834 [8.540, 9.111] | 8.834 [8.580, 9.134] | 0.000 | yes |
+| TG | H-A2 DL->TG | 10.614 [10.179, 11.068] | 10.515 [10.073, 10.990] | +0.099 | yes |
+| TG | MLP+Z | 15.950 [15.223, 16.654] | 16.201 [15.487, 16.938] | -0.251 | yes (neural) |
+| TG | 1 - H-A2/eq (%) | 33.5 [30.6, 36.2] | 35.1 [32.3, 37.8] | -1.6 | follows from eq |
+| TG | switch | 5.540 [5.311, 5.785] | 5.492 [5.271, 5.744] | +0.048 | yes |
+| MV | two-ended nameplate | 4.003 [3.746, 4.271] | 4.004 [3.747, 4.268] | -0.000 | yes |
+| MV | two-ended identified R1+X1 | 1.804 [1.665, 1.954] | 1.804 [1.661, 1.958] | 0.000 | yes |
+| MV | (identified R1 only, mine) | 1.810 [1.673, 1.958] | - | - | - |
+| MV | Eriksson (56,340) | 23.746 [23.163, 24.309] | 23.746 [23.164, 24.313] | 0.000 | yes |
+| MV | H-A2 zero-shot | 32.486 [31.701, 33.251] | 32.602 [31.787, 33.434] | -0.116 | yes |
+| MV | switch | 27.165 [26.443, 27.886] | 27.220 [26.533, 27.913] | -0.055 | yes |
+| ADAPT | two-ended | 6.153 [5.001, 7.359] | 6.153 [5.016, 7.412] | 0.000 | yes |
+| ADAPT | Eriksson | 16.134 [14.859, 17.347] | 16.134 [14.970, 17.435] | 0.000 | yes (CI 0.11) |
+| ADAPT | H-A2 in-grid | 12.048 [11.078, 13.022] | 11.977 [11.062, 12.948] | +0.071 | yes |
+| ADAPT | switch | 12.534 [11.318, 13.640] | 12.671 [11.589, 13.879] | -0.137 | yes, but bin definition differs (below) |
+
+Metres and P95 (mine; lead deltas):
+- two-ended mean / P95: DL 158.7 m / 3.235 % (830 m); TG 121.4 m / 1.772 % (513 m); MV 68.7 m / 14.28 % (280 m);
+  MV identified 32.7 m / 7.834 % (100 m); adapt 1,655 m / 36.37 % (9,655 m). Lead deltas <= 0.07 m and <= 0.002 pp.
+- Eriksson: DL 3,108 m / 49.0 % (14,700 m); TG 2,772 m / 49.0 % (15,000 m); MV 396 m / 49.0 % (1,467 m); adapt
+  4,465 m / 47.94 % (14,580 m). Identical to the lead (<= 0.01 m). The P95 of 49 % is the 0.5 prior on undefined windows.
+- H-A2: DL 2,338 m / 27.35 % (8,839 m); TG 3,355 m / 34.91 % (11,603 m); MV 501 m / 83.81 % (2,066 m); adapt
+  3,248 m / 36.91 % (9,727 m). Lead deltas: mean +20 to +35 m, P95 -0.32 to +0.38 pp (refit noise).
+
+Eriksson on defined windows (MAE % / coverage %), all, <= 15 ms, >= 20 ms:
+- DL 6.732 / 84.41, 32.196 / 48.38, 3.632 / 92.83; TG 5.986 / 87.46, 31.635 / 49.37, 2.917 / 96.35;
+  MV 15.868 / 44.15, 36.099 / 8.28, 15.124 / 52.53. Identical to the lead (<= 0.0004).
+- Adapt: all 11.284 / 64.07 (identical); <= 15 ms 33.366 / 35.52 (lead 32.577 / 37.10); >= 20 ms 7.912 / 71.31 (lead
+  8.344 / 71.22). Cause below; with the lead's edges my values are 32.577 / 37.10 and 8.344 / 71.22, exact.
+
+### Audit of `src/c1/revamp_stats.py`
+- Scoring (`err`): NaN -> 0.5, then clip, |d^ - d| x 100. Equivalent to the registered rule. Clean.
+- Bootstrap: `boot_idx` re-seeds `default_rng(0)` on every call, so all methods on one window set use the same resamples;
+  the reduction CI is paired as required. Window-level MAE of the concatenated rows. MV two-ended uses its own 3,318-
+  episode set. Clean.
+- Inputs: lead per-window tables only (`c1_classical_*`, `c1_grid_*`, `zs_pred` refit, `c1_zs_MV_pred.csv`,
+  `c1_adapt_td.csv`, `c1_adapt_ingrid_pred_adapt_test.csv`, `c1_equal_info_preds.parquet`). MV scored against one y
+  (y_local); correct because the two-ended rows exclude MainLn8-14, the only flipped line.
+- `two_zid` uses `c1_grid_MV_zid` = identified R1 AND X1 (reproduced exactly by my R1+X1 variant). The paper should say
+  "identified Z1 (R1 and X1)"; with R1 only it is 1.810.
+- **Defect 1 (bin edges, adapt only).** (c) uses `post_ms <= 17.5` for "le15" and `> 17.5` for "ge20", and (d) switches
+  to Eriksson at `post_ms > 17.5`. Design 25 says <= 15 / >= 20 ms and "from 20 ms". On DL / TG / MV (5 ms grid) this
+  is identical, but adapt-test windows are not on the grid (e.g. 18.23 ms): 398 adapt windows lie in (15, 20) ms. So
+  the adapt le15 / ge20 cells and the adapt switch use Eriksson on 17.5-20 ms windows that the design assigns to H-A2.
+  Effect: E_defined le15 32.58 -> 33.37 % (coverage 37.1 -> 35.5), ge20 8.34 -> 7.91 %, switch 12.67 -> 12.53
+  (mine, spec edges) / 12.69 (mine, lead edges). Fix: use the design edges (<= 15, >= 20, switch at >= 20) or amend
+  design 25 to the 17.5 ms edges and relabel the columns. No conclusion changes (the adapt switch is worse than H-A2
+  alone in both versions: 12.5-12.7 against 12.0).
+- **Minor.** `lengths()` concatenates DL, TG and MV and keeps the first row per line name; DL and TG share names with
+  different lengths (MainLn1-2A is 20 km in DL, 25 km in TG). It is only used for adapt, where DL comes first, so the
+  result is right (my adapt metres agree to 0.02 m), but it is order-dependent: map adapt lines from the DL table only.
+- **Minor.** The classical / grid / prediction merges are inner joins without a row-count assert; the counts are right
+  (14,640 / 32,940 / 56,340 / 6,883), so nothing was dropped.
+- Leakage: none (report-only statistics on existing predictions).
+
+### Disclosure points
+1. The H-A2 gain over the best equal-information net is significant in both directions (paired CI excludes 0): mine
+   29.7 % [24.8, 34.2] TG->DL and 33.5 % [30.6, 36.2] DL->TG; lead 32.7 / 35.1 %. The 1.6-3.0 pp spread comes from the
+   independently trained nets (GRU+Z 11.04 vs 11.42). Quote the lower values or both.
+2. MV Eriksson coverage (44.2 %) counts the 3,756 MainLn8-14 windows, which cannot have an Eriksson estimate (no remote
+   end). On the 14 two-ended segments coverage is 47.3 % (MAE on defined windows 15.87 %, unchanged); MV Eriksson MAE
+   on those 52,584 windows is 23.28 % against 23.75 % on all 56,340.
+3. Eriksson's P95 of 49 % on DL / TG / MV is the 0.5 prior on undefined windows; P95 on defined windows would be
+   informative if the paper quotes P95.
+4. The switch (exploratory) helps on DL / TG (5.76 / 5.54 against H-A2 7.75 / 10.61) and on MV (27.2 against 32.5), and
+   hurts on adapt test (12.5-12.7 against 12.0).
+
+Files: `results/validate_ha2_part9_{summary.csv, perwindow.parquet, mv_zid_perwindow.parquet, frozen.sha256}`; after the
+freeze `results/validate_ha2_part9cmp.csv`, `validate_ha2_part9cmp_diag.csv`.
+
+---
+
+## Part 10: the two CIGRE MV ablation cells (design 19 / 19a)
+Spec: `claudedocs/validator_spec_part10.md`. Code (`src/validate_ha2/`): `part10.py`, `freeze_part10.py`. It reuses my
+own `tokens.phasor`, `mv.line_z` / `mv.CACHE`, `part8_abl.ZTOK`, `HGB_PARAMS` and the part-8 DL / TG ohm tables, and
+uses only CPU (6 workers for the MV ohm tokens, sklearn HGB).
+
+Protocol: train on my guarded DL + TG official windows pooled (14,640 + 32,940, same row order as my part-5 MV cell).
+Test zero-shot on all 56,340 CIGRE MV line-fault windows (local terminal; bus 14 for MainLn8-14; target y_local).
+Seeds 0-2, 3-seed mean prediction, clipped to [0, 1].
+- A3: zr / zi / absz = Re, Im, |V/I| in ohm (last-cycle phasors, k0-compensated ground loops), unclipped, 0 when
+  |I| <= 1e-9; the other 59 tokens unchanged. Sanity check: ohm / Z1 equals my per-unit token to < 1e-6 on every
+  unclipped window and loop. The share of windows with at least one clipped per-unit z token is DL 84.2 %, TG 81.3 %
+  and MV 93.8 %.
+- A1: raw 480 x 6 local window, 2,880 float32 samples. There is no per-window scaling, exactly as in my part-8 A1raw.
+- Reference: H-A2 refit in the same run gives 32.486, identical to my part-5 / part-9 MV cell.
+
+Independence: frozen at **2026-10-06 14:51:32 +05:30** (`results/validate_ha2_part10_frozen.sha256`). The freeze came
+before I opened `src/c1/ablation_a3_fix.py`, `ablations.py`, `zs_eval.py`, `results/c1_ablation_a3_fixed.csv` or
+`c1_ablations.csv`.
+
+### Mine (frozen) against the lead. MAE, % of line length
+| cell | mine | lead | delta | tolerance | verdict |
+|---|---|---|---|---|---|
+| A3 ohm tokens, DL+TG -> MV | 27.425 (seed SD 0.15) | 27.269 (`c1_ablation_a3_fixed.csv`) | +0.157 | 0.5 | within |
+| A1 raw window, DL+TG -> MV | 38.848 (seed SD 0.24) | 38.848 (`c1_zs_MV.csv`, A1_raw_window) | 0.000 (bit-identical) | 1.0 | within |
+| (H-A2 reference, MV) | 32.486 | 32.602 | -0.116 | 0.5 | within |
+| (A3fix TG->DL / DL->TG, lead extra; mine from part 8) | 7.883 / 9.902 | 7.843 / 9.953 | +0.04 / -0.05 | 0.5 | within |
+
+The MV A1 value is not in `c1_ablations.csv`, which holds only the 110 kV rows. It is in `c1_zs_MV.csv`, written by
+`zs_eval.py`.
+
+Other numbers (mine):
+- A3 on MV: median 24.12, <= 15 ms 32.21 (lead 31.87), >= 21 ms 26.32 (lead 26.20), short circuits 27.32.
+- A3 against H-A2 by fault class:
+  - better on short circuits: 1phg 26.9 vs 30.2, 2ph 26.7 vs 35.8, 3ph 25.9 vs 30.1
+  - worse on high-impedance faults (32.8 vs 27.2) and incipient faults (25.1 vs 15.7)
+- A1 on MV is degenerate. Its predictions sit in a narrow band (5-95 % quantile 0.79-0.87, correlation with y_local
+  0.13), because 20 kV samples lie outside the 110 kV training range. It is 8.6 pp worse than the constant 0.5 (30.29).
+
+### Explained difference
+A3 MV is +0.157. This is the same refit noise as the H-A2 MV cell (-0.116, opposite sign) and about 1 seed SD. Sources:
+- The lead's Z1 / Z0 come from the grid pickle in float32; mine come from the spec in 5 digits (part 8, point 1). This
+  moves the 59 per-Z1 tokens and k0 slightly, and so moves HGB bin edges.
+- The raw samples are the same; the part-8 check found a max diff of 0, and A1 is bit-identical here.
+
+### Audit of the lead's scripts
+- **`ablation_a3_fix.py`** (new, design 19a)
+  - Ohm tokens are taken from `local_features.window_feats` loop (V, I): last cycle, ground loops with
+    I + k0 3 I0, k0 = (Z0 - Z1) / (3 Z1), V / I unclipped, 0 when |I| <= 1e-9. This matches 19a and my definition.
+  - The flipped terminal for MainLn8-14 comes from `has_term` and uses the remote bus. This is correct.
+  - Merge on (sim_idx, post_ms rounded to 3 decimals): `one_to_one` validation, row count and not-NaN are asserted.
+  - The other tokens come from the post-guard `c1_grid_{DL,TG,MV}.parquet`.
+  - `fit_eval` is shared with `ablations.py`: same PARAMS, seeds 0-2, mean then clip. `check_allow(ALLOW)` is applied.
+  - MV target: `te.y` of `c1_grid_MV`, which is y_local (asserted equal to the raw npz y in `zs_eval.py`; checked in
+    part 8).
+  - Clean.
+  - Minor: no per-window prediction file is written, so the cell cannot be checked window by window.
+- **`zs_eval.py`, A1 rows**: raw `c1_grid_*_raw.npz` windows, pooled DL+TG, reshape to 2,880 features, with no
+  scaling. y is asserted equal to the token table. Clean (bit-identical to mine).
+- **`ablations.py`**: unchanged since part 8. The old clipped x Z1 `unnormalise` is still used by `zs_eval.py`.
+- **Defect (reporting, not code): stale A3 row.** `c1_zs_MV.csv` still carries `A3_unnormalised` = 29.53, which uses
+  the old, defective definition. The corrected value (27.27) is only in `c1_ablation_a3_fixed.csv`. The paper and the
+  tables must quote 27.27 (validated: 27.43), not 29.53. Either drop the stale row or relabel it
+  "clipped per-unit x Z1 (superseded, 19a)".
+- Leakage: none. The remote end does not enter. Labels enter only as y.
+
+### Disclosure points
+1. **Normalisation.** Un-normalised (ohm) tokens are clearly **better** than Z1-normalised H-A2 zero-shot on CIGRE MV:
+   27.3-27.4 against 32.5-32.6, about -5 pp, with seed SDs of 0.15-0.5. On 110 kV the result is also equal or better
+   (7.84-7.88 vs 7.69-7.75; 9.90-9.95 vs 10.52-10.61). Under design 19 / A3-MV, no Z1-normalisation claim may be
+   made. 19a already says the paper makes none. The text should not imply that per-unit tokens are what transfers.
+2. On MV, H-A2 (32.5) is worse than the constant 0.5 (30.29). A3 (27.4) beats the constant by 2.9 pp and is the only
+   one-ended learned cell below it.
+3. A1 (raw-window boosting) on MV is a near-constant predictor (38.85, worse than 0.5). Report it as "fails to
+   transfer across voltage level", not as a meaningful baseline value.
+
+Files: `results/validate_ha2_part10_{summary.csv, A3_ohm_MV.parquet, pred_{HA2_ref,A3,A1raw}_MV.csv, frozen.sha256,
+notes.md}` and the log `validate_ha2_part10.log`.

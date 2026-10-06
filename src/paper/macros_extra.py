@@ -29,7 +29,7 @@ def extra_macros(R, put):
     learned = ["H-A2", "GRU+Z", "GRU-raw", "MLP+Z", "MLP-raw"]
     put("fbLearnLeMin", float(sub[learned].min().min())); put("fbLearnLeMax", float(sub[learned].max().max()))
     put("fbESubAllMin", float(sub["Eriksson"].min())); put("fbESubAllMax", float(sub["Eriksson"].max()))
-    rat = sub["Eriksson"] / sub[learned].min(axis=1)  # Eriksson vs best learned locator, per direction and time bin
+    rat = sub["Eriksson"] / sub["H-A2"]  # Eriksson vs PFB (H-A2), per direction and 5 ms bin
     put("fbRatioMin", float(rat.min()), 1); put("fbRatioMax", float(rat.max()), 1)
     ch = pd.read_csv(R / "c1_chain_eval.csv").set_index(["direction", "scenario"])
     aa = [abs(ch.loc[(di, "AA"), c] - ch.loc[(di, "clean"), c]) for di in ("TG_to_DL", "DL_to_TG")

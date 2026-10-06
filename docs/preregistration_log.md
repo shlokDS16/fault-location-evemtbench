@@ -349,3 +349,29 @@ which is not V/I in ohm. Corrected definition (before re-running): for each loop
 the last-cycle phasors, NOT clipped (0 when |I| < 1e-9); all other tokens unchanged; same HGB settings and seeds;
 TG->DL, DL->TG and DL+TG->MV. Report-only (no claim depends on it; the paper makes no normalisation claim).
 Also: section 15 / 24(b) TD tokens use the last 30 ms of the window (s1 - 480 + 192 .. s1), not 40 ms.
+
+## 25. REVAMP ANALYSES (research/REVIEW_DRAFT2_PDF.md s.7 "analyses a referee will ask for"), REPORT-ONLY, fixed
+## 2026-10-06 S6 before any of them was computed. No gate; no registered result changes; existing per-window predictions
+## only (no retraining except the deterministic re-fit of the H-A2 zero-shot models by classical_report.zs_pred).
+Scoring as in the paper: estimates clipped to [0, 1], undefined (NaN) -> 0.5; error e = |d^ - d| x 100 (% of length).
+Test sets: DL and TG benchmark families (line faults), CIGRE MV (two-ended rows: the 52,584 windows on sections measured
+at both ends; one-ended rows: all 56,340), adapt test split (6,883 line-fault windows).
+(a) Episode-level bootstrap 95 % CI: B = 2,000 resamples of episodes (sim_idx) with replacement, numpy
+    default_rng(0), percentile interval of the window-level MAE, for: two-ended TD (DL, TG, MV nameplate, MV identified
+    Z, adapt test); Eriksson (DL, TG, adapt test, MV); H-A2 zero-shot (TG->DL, DL->TG, DL+TG->MV) and in-grid adapt test;
+    best equal-information baseline zero-shot (TG->DL GRU+Z, DL->TG MLP+Z; error of each seed's prediction, averaged
+    over the 3 seeds per window). Paired CI (same resamples) of the relative reduction 1 - MAE(H-A2) / MAE(best eq) in
+    both zero-shot directions. If the paired CI includes 0 the gain is reported as not significant.
+(b) Physical units: per window error in metres = e/100 x length_km x 1000 (line length of the faulted line); report
+    mean (m) and 95th percentile (% and m) for two-ended TD, Eriksson and H-A2 on the sets of (a).
+(c) Eriksson scored only where its quadratic has a root in [-0.1, 1.1]: MAE on defined windows and coverage (share
+    defined), overall and for windows ending <= 15 ms and >= 20 ms after inception; DL, TG, adapt test, MV.
+(d) EXPLORATORY (post hoc: the per-time results of Fig. 4 had been seen): one-ended switch rule = H-A2 for windows ending
+    < 20 ms after inception; from 20 ms, Eriksson where defined, else H-A2. MAE for zero-shot TG->DL, DL->TG,
+    DL+TG->MV and in-grid adapt test. Must be labelled exploratory in the paper.
+(e) Indicative computational cost (one CPU core, wall clock, this laptop; not validated, stated as indicative): median
+    time per window for the two-ended TD estimate (Clarke + Savitzky-Golay + LS), the local feature extraction (59 phasor
+    + 18 TD features) and H-A2 inference (3 boosting models), measured on in-memory records of 50 DL episodes (CSV
+    reading excluded); and the H-A2 training time on the TG source grid (3 seeds).
+Validation: validator part 9 re-implements (a)-(d) from claudedocs/validator_spec_part9.md; tolerance: point values
+<= 0.01 pp (H-A2 cells <= 0.5 pp: boosting refit noise), CI bounds <= 0.15 pp (Monte-Carlo noise of B = 2,000).

@@ -26,6 +26,8 @@ def mae(est, y):
 # ---- published learned baselines (EvEMTBench v1.1.0, fault location, MAE %) ----
 p = pd.read_csv(PUB)
 p = p[p.task.str.startswith("fault_location") & (p.metric == "mae")]
+p_all = p
+p = p[p.baseline != "majority"]  # published LEARNED models only; the constant predictor is reported separately
 GRID = {"DL": "double_line", "TG": "testgrid_110kv", "MV": "cigre_mv"}
 for k, g in GRID.items():
     q = p[(p.grid == g) & (p.protocol == "held_out") & (p.test_set == "benchmark")]
@@ -37,8 +39,8 @@ for k, g in GRID.items():
 q = p[(p.grid == "double_line") & (p.protocol == "held_out") & (p.test_set == "test")]
 put("pubBestAdaptTest", q["mean"].min())
 put("pubLocalAdaptTest", q[q.task == "fault_location_local"]["mean"].min())
-put("pubMajorityMV", p[(p.grid == "cigre_mv") & (p.baseline == "majority") & (p.protocol == "held_out")
-                       & (p.test_set == "benchmark") & (p.task == "fault_location_local")]["mean"].iloc[0])
+put("pubMajorityMV", p_all[(p_all.grid == "cigre_mv") & (p_all.baseline == "majority") & (p_all.protocol == "held_out")
+                           & (p_all.test_set == "benchmark") & (p_all.task == "fault_location_local")]["mean"].iloc[0])
 
 # ---- two-ended TD locator ----
 for k, f in (("DL", "DL"), ("TG", "TG"), ("MV", "MV"), ("MVid", "MV_zid")):
@@ -151,7 +153,8 @@ for k, f in (("DL", "c1_grid_DL"), ("TG", "c1_grid_TG"), ("MV", "c1_grid_MV")):
     u = t.drop_duplicates("line")
     z = np.hypot(u.Z1r, u.Z1x)
     put(f"gEp{k}", int(t.sim_idx.nunique())); put(f"gLines{k}", int(len(u)))
-    put(f"gLenMin{k}", float(u.length_km.min()), 2); put(f"gLenMax{k}", float(u.length_km.max()), 2)
+    nd = 2 if k == "MV" else 0  # 110 kV lines are whole kilometres
+    put(f"gLenMin{k}", float(u.length_km.min()), nd); put(f"gLenMax{k}", float(u.length_km.max()), nd)
     put(f"gZMin{k}", float(z.min()), 2); put(f"gZMax{k}", float(z.max()), 2)
 t = pd.read_parquet(R / "c1_adapt_tokens.parquet", columns=["sim_idx", "split", "R", "y"])
 for sp, k in (("train", "Tr"), ("test", "Te")):
@@ -190,6 +193,13 @@ put("ratioMin", min(_r), 1); put("ratioMax", max(_r), 0)
 
 from macros_review import review_macros  # noqa: E402
 review_macros(R, put)
+
+from macros_revamp import revamp_macros  # noqa: E402
+revamp_macros(R, PUB, put)
+from macros_revamp import ratio_macros  # noqa: E402
+ratio_macros(out, put)
+from macros_revamp import cond_extra_macros  # noqa: E402
+cond_extra_macros(R, put)
 
 for _d, _k in (("TG_to_DL", "TGDL"), ("DL_to_TG", "DLTG")):
     put(f"haSingle{_k}", h[(h.method == "H-A2") & (h.direction == _d) & (h.test_noise == "clean")].single_seed_mean.iloc[0])
