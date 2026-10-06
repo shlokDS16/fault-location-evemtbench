@@ -217,6 +217,27 @@ def render_snippets(tex, preamble_extra):
     return tex
 
 
+TABLE_RULES = []  # per tabular, in document order: {row index: "top" | "mid"} and the number of rows
+
+
+def record_rules(body):
+    """Positions of \\toprule / \\midrule / \\bottomrule in every tabular, for drawing the same rules in Word."""
+    TABLE_RULES.clear()
+    for g in re.finditer(r"\\begin\{tabular\}(\{(?:[^{}]|\{[^{}]*\})*\})?(.*?)\\end\{tabular\}", body, flags=re.S):
+        segs = re.split(r"\\\\", g.group(2))
+        rules, rows, pending = {}, 0, None
+        for seg in segs:
+            for m in re.finditer(r"\\(toprule|midrule|bottomrule)", seg):
+                pending = "top" if m.group(1) == "toprule" else ("mid" if m.group(1) == "midrule" else pending)
+            content = re.sub(r"\\(toprule|midrule|bottomrule|hline)|\\cmidrule(\([a-z]*\))?\{[^}]*\}", "", seg).strip()
+            if content:
+                if pending:
+                    rules[rows] = pending
+                    pending = None
+                rows += 1
+        TABLE_RULES.append((rules, rows))
+
+
 def to_pandoc_latex(tex, mac):
     body = tex.split("\\begin{document}", 1)[1].split("\\end{document}", 1)[0]
     pre = tex.split("\\begin{document}", 1)[0]
@@ -286,6 +307,7 @@ def to_pandoc_latex(tex, mac):
     body = re.sub(r"(\\multicolumn\{\d+\}\{)@\{\}([lcr])(@\{\})?\}", r"\1\2}", body)
     body = re.sub(r"\\shortstack\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}", lambda g: g.group(1).replace("\\\\", " "), body)
     body = re.sub(r"\\(begin|end)\{(table|figure)\*\}", r"\\\1{\2}", body)
+    record_rules(body)
     body = body.replace("{figs/", "{../figs/").replace(".pdf}", ".png}")
     # figures at their print width: one column 3.5 in, full width = the 6.5 in text block of the docx
     body = body.replace("width=\\columnwidth", "width=3.5in").replace("width=\\textwidth", "width=6.5in")
@@ -304,6 +326,23 @@ def to_pandoc_latex(tex, mac):
     body = re.sub(r"\\begin\{(equation|align)\}(.*?)\\end\{\1\}", eqnum, body, flags=re.S)
     head = "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n"
     return head + body + "\n\\end{document}\n"
+
+
+def set_borders(parent, tag, edges):
+    """Replace the <w:tag> border block (tblBorders or tcBorders) of parent with the given {edge: (val, size)}."""
+    for old in parent.findall(qn(f"w:{tag}")):
+        parent.remove(old)
+    box = OxmlElement(f"w:{tag}")
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        if edge in edges:
+            val, sz = edges[edge]
+            el = OxmlElement(f"w:{edge}")
+            el.set(qn("w:val"), val)
+            el.set(qn("w:sz"), str(sz))
+            el.set(qn("w:space"), "0")
+            el.set(qn("w:color"), "auto")
+            box.append(el)
+    parent.append(box)
 
 
 def postprocess(path):
@@ -334,6 +373,48 @@ def postprocess(path):
             p.style = d.styles["Bibliography"]
         if p.style.name == "Image Caption" and "Figure Caption" in names:
             p.style = d.styles["Figure Caption"]
+    # three-line tables as in the reference: 1.5 pt rule on top and bottom, 0.75 pt rule under the header and
+    # between row groups (the LaTeX \midrule positions), no vertical or inner lines
+    if len(TABLE_RULES) != len(d.tables):
+        raise RuntimeError(f"{len(TABLE_RULES)} LaTeX tables but {len(d.tables)} Word tables")
+    for t, (rules, nrows) in zip(d.tables, TABLE_RULES):
+        if len(t.rows) != nrows:
+            raise RuntimeError(f"row count mismatch: LaTeX {nrows}, Word {len(t.rows)} ({t.rows[0].cells[0].text!r})")
+        set_borders(t._tbl.tblPr, "tblBorders", {k: ("nil", 0) for k in
+                                                 ("top", "left", "bottom", "right", "insideH", "insideV")})
+        for i, row in enumerate(t.rows):
+            edges = {}
+            if rules.get(i) == "top" or i == 0:
+                edges["top"] = ("single", 12)
+            elif rules.get(i) == "mid":
+                edges["top"] = ("single", 6)
+            if i == len(t.rows) - 1:
+                edges["bottom"] = ("single", 12)
+            if edges:
+                for tc in row._tr.findall(qn("w:tc")):
+                    set_borders(tc.get_or_add_tcPr(), "tcBorders", edges)
+    for t in d.tables:  # keep each table, and its caption, on one page
+        prev = t._tbl.getprevious()
+        while prev is not None and prev.tag.endswith(("bookmarkEnd", "bookmarkStart")):
+            prev = prev.getprevious()
+        if prev is not None and prev.tag == qn("w:p"):
+            ppr = prev.get_or_add_pPr()
+            if ppr.find(qn("w:keepNext")) is None:
+                ppr.append(OxmlElement("w:keepNext"))
+        for i, row in enumerate(t.rows):
+            trpr = row._tr.get_or_add_trPr()
+            if trpr.find(qn("w:cantSplit")) is None:
+                trpr.append(OxmlElement("w:cantSplit"))
+            for c in row.cells:  # last row too: the table note below stays with the table
+                for par in c.paragraphs:
+                    par.paragraph_format.keep_with_next = True
+        nxt = t._tbl.getnext()  # the table note: one block, never split over two pages (skip bookmark tags)
+        while nxt is not None and nxt.tag != qn("w:p") and nxt.tag.endswith(("bookmarkEnd", "bookmarkStart")):
+            nxt = nxt.getnext()
+        if nxt is not None and nxt.tag == qn("w:p"):
+            ppr = nxt.get_or_add_pPr()
+            if ppr.find(qn("w:keepLines")) is None:
+                ppr.append(OxmlElement("w:keepLines"))
     for t in d.tables:  # wide tables (Table I: 8 columns) in a smaller font so header words do not break
         if len(t.columns) >= 7:
             for row in t.rows:
