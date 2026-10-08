@@ -1427,3 +1427,12 @@ A3 MV is +0.157. This is the same refit noise as the H-A2 MV cell (-0.116, oppos
 
 Files: `results/validate_ha2_part10_{summary.csv, A3_ohm_MV.parquet, pred_{HA2_ref,A3,A1raw}_MV.csv, frozen.sha256,
 notes.md}` and the log `validate_ha2_part10.log`.
+
+## Part 10b (2026-10-08): professor revision analyses, design s.26/26a (spec claudedocs/validator_spec_part10b.md)
+Re-implemented from the spec only (src/validate_c1/part10b.py -> results/validate_part10b.csv); the lead's scripts
+two_end_windows.py, two_end_learn.py, prof_m6.py and macros_prof.py were not read.
+- (a) Two-ended learners: per-window predictions re-scored, max deviation 2e-6 pp (tolerance 0.01). Test windows equal
+  the official sets (DL 14,640; TG 32,940; MV two-ended 52,584) for all 36 runs. PASS.
+- (b) Time-domain locator under white noise, independent noise realisation (seed 20261008): max deviation 0.034 pp
+  (TG, 40 dB; tolerance 0.05). PASS.
+- (c) d = 0.5 exclusion: 108 comparisons, max deviation 4e-15 pp, PFB cross-grid cells included. PASS.

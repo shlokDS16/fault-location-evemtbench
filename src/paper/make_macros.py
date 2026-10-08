@@ -201,6 +201,12 @@ ratio_macros(out, put)
 from macros_revamp import cond_extra_macros  # noqa: E402
 cond_extra_macros(R, put)
 
+from macros_prof import td_noise_macros  # noqa: E402
+td_noise_macros(R, put, out)
+from macros_prof import learn2_macros, m6_macros  # noqa: E402
+learn2_macros(R, put)
+m6_macros(R, put)
+
 for _d, _k in (("TG_to_DL", "TGDL"), ("DL_to_TG", "DLTG")):
     put(f"haSingle{_k}", h[(h.method == "H-A2") & (h.direction == _d) & (h.test_noise == "clean")].single_seed_mean.iloc[0])
 

@@ -375,3 +375,37 @@ at both ends; one-ended rows: all 56,340), adapt test split (6,883 line-fault wi
     reading excluded); and the H-A2 training time on the TG source grid (3 seeds).
 Validation: validator part 9 re-implements (a)-(d) from claudedocs/validator_spec_part9.md; tolerance: point values
 <= 0.01 pp (H-A2 cells <= 0.5 pp: boosting refit noise), CI bounds <= 0.15 pp (Monte-Carlo noise of B = 2,000).
+## 26. PROFESSOR REVISION ANALYSES (research/PROF_COMMENTS_2026-10-08.md M1, M5, M6), REPORT-ONLY, fixed 2026-10-08
+## BEFORE any of them was computed or any new output was seen. No gate; no registered result changes; wording rules below.
+Scoring as in s.25: estimates clipped to [0, 1], undefined (NaN) -> 0.5; e = |d^ - d| x 100.
+(a) M1 TWO-ENDED LEARNERS AT EQUAL INFORMATION. Inputs per official window (both terminals, same 480-sample windows as
+    src/c1/raw_windows.py): (P) "physical inputs": the four sequences u_alpha, u_beta, w_alpha, w_beta of Eq. (3)
+    (Clarke, Savitzky-Golay 11/2 derivatives, nameplate R1, L1 of the faulted line, exactly as the TD locator), each
+    window divided by its own RMS of (w_alpha, w_beta) jointly (scale-free; d = u/w is invariant to it);
+    (Z) "two-ended +Z": raw 12 channels (S and R terminals, Ia Ib Ic Va Vb Vc) plus R1, X1, R0, X0 of the faulted line.
+    Models: MLP and GRU of src/c1/equal_info.py, identical recipe (AdamW 1e-3, wd 1e-4, cosine, 60 epochs, batch 256,
+    patience 12, episode-grouped 10 % validation, channel/target standardisation, MSE), input width adapted only.
+    Seeds 0, 1, 2. Directions: TG->DL, DL->TG, DL+TG->MV (MV test = the 52,584 two-ended windows; train = all line-fault
+    windows of both 110 kV grids). Report MAE mean and SD over seeds per (input, model, direction) and the best cell.
+    Wording rule: if the best two-ended learner's MAE is >= 2x the TD locator's MAE on a test set, the paper may state that
+    the physics advantage holds against learners given the same two-ended physical inputs on that set; if it is within
+    2x, the claim is softened to "comparable"; the title/abstract say "equal terminals" unless the rule holds on all
+    three sets.
+(b) M5 TD NOISE. Report the existing sweep (src/c1/td_noise.py, Sep 30, SG derivative, official windows, AWGN per
+    channel at 60/40/30 dB of the channel's pre-fault RMS, seeded per episode) for DL and TG: results/c1_td_noise.csv,
+    c1_td_noise_TestGrid110kV.csv. Rows added to Table VI for 40 and 30 dB (two-ended). Validator re-implements the 30 dB
+    and 40 dB SG cells. Wording rule of s.22 applies (robust if rise <= 1.0 pp).
+(c) M6 d = 50 % ARTEFACT. Existing per-window predictions only (no retraining; learners were trained with these
+    episodes). Exclusion set: every window whose true location y = 0.5 (|y - 0.5| < 1e-9), all fault types. Recompute the
+    MAE of: TD and phasor two-ended (DL, TG, DL-adapt test, MV two-ended set); reactance, Takagi, Eriksson (undefined as
+    0.5), R-L identification, best equal-information MLP/GRU, PFB (columns of Table III where per-window predictions exist).
+    Also report: share of windows with y = 0.5 per set; share of all windows where Eriksson is undefined AND y = 0.5
+    (zero error by construction); PFB MAE on incipient + HIF windows vs short circuits. Published models: not recomputable
+    (no per-window predictions); stated as such. Wording rule: a ranking stated in the paper is kept only if it holds in
+    the excluded-set table; otherwise the text is changed.
+Validation: validator part 10b (claudedocs/validator_spec_part10b.md) re-implements (a) evaluation of saved predictions,
+(b) 30/40 dB cells and (c) from the spec only; tolerance 0.01 pp (network cells: re-scoring of saved predictions only).
+### 26a. AMENDMENT (2026-10-08, after the s.26(a) MAE table and the s.26(c) output were seen; no excluded-set number of
+### the two-ended learners seen yet): the d = 0.5 exclusion of 26(c) is also applied to the 26(a) learners (same rule,
+### per seed then averaged) and to the TD locator on the same test sets, because the new rows enter Table II. Also
+### reported for them: MAE on incipient + HIF windows vs short circuits. Report-only; no wording rule changes.

@@ -431,8 +431,8 @@ def postprocess(path):
                     for par in c.paragraphs:
                         for r in par.runs:
                             r.font.size = Pt(8.5)
-    d.core_properties.title = ("Where Learning Helps in Impedance-Based Fault Location: An Equal-Information Evaluation "
-                               "on an Open EMT Benchmark")
+    d.core_properties.title = ("Learned and Classical Impedance-Based Fault Location: An Equal-Terminal Evaluation "
+                               "on an Open Electromagnetic Transient Benchmark")
     d.core_properties.author = "Shlok Goenka; Ganesh Khekare"
     d.save(path)
 

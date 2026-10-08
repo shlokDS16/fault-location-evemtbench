@@ -1,7 +1,7 @@
-# Code and results: where learning helps in impedance-based fault location
+# Code and results: learned and classical impedance-based fault location
 
-For the manuscript *Where Learning Helps in Impedance-Based Fault Location: An Equal-Information Evaluation on an Open
-EMT Benchmark* by Shlok Goenka and Ganesh Khekare (School of Computer Science and Engineering, Vellore Institute of
+For the manuscript *Learned and Classical Impedance-Based Fault Location: An Equal-Terminal Evaluation on an Open
+Electromagnetic Transient Benchmark* by Shlok Goenka and Ganesh Khekare (School of Computer Science and Engineering, Vellore Institute of
 Technology), submitted to IEEE Transactions on Power Delivery.
 
 The repository holds the code that produces every number, table and figure of the paper from the public EvEMTBench
@@ -87,7 +87,13 @@ python src/c1/sync_subsample.py
 # 7. confidence intervals, errors in metres, Eriksson on defined windows, switch rule; indicative runtime
 python src/c1/revamp_stats.py
 python src/c1/runtime.py
-# 8. numbers, figures and the Word review copy of the paper
+# 8. revision analyses (design log s.26): time-domain locator under white noise, two-ended learners (GPU), d = 0.5 exclusion
+for G in DoubleLine TestGrid110kV; do EVEMT_GRID=$G python src/c1/td_noise.py; done
+for G in DoubleLine TestGrid110kV CigreMVGrid; do EVEMT_GRID=$G python src/c1/two_end_windows.py; done
+python src/c1/two_end_learn.py
+python src/c1/prof_m6.py
+python src/validate_c1/part10b.py   # independent re-implementation of s.26
+# 9. numbers, figures and the Word review copy of the paper
 python src/paper/grid_topology.py
 python src/paper/make_macros.py
 python src/paper/figs_v3.py

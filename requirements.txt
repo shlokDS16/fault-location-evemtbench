@@ -5,6 +5,7 @@ scipy==1.17.1
 scikit-learn==1.8.0
 torch==2.11.0
 pyarrow==25.0.1
+fastparquet==2026.9.0  # parquet engine where pyarrow's parquet module is unavailable
 matplotlib==3.10.8
 numba==0.64.0
 networkx==3.6.1

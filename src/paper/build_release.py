@@ -19,7 +19,8 @@ RESULTS = ["c1_ha2_eval.csv", "c1_ha2_noise.csv", "c1_adapt_ingrid.csv", "c1_zs_
            "c1_review_sync_us.csv", "c1_i0_guard_patch.csv", "c1_i0_guard_check.csv", "c1_equal_info_preds_check.csv",
            "validate_ha2_ingrid_counts.csv", "validate_ha2_guard_oldnew.csv", "validate_ha2_neural_runs.csv",
            "validate_ha2_ingrid_neural_summary.csv", "c1_revamp_stats.csv", "c1_runtime.csv",
-           "validate_ha2_part9_summary.csv", "validate_ha2_part9cmp.csv"]
+           "validate_ha2_part9_summary.csv", "validate_ha2_part9cmp.csv",
+           "c1_two_end_learn.csv", "c1_prof_m6.csv", "c1_prof_m6_extra.csv", "validate_part10b.csv"]
 DOCS = {"claudedocs/c1_hybrid_design.md": "preregistration_log.md", "research/C1_GATE.md": "results_ledger.md",
         "research/VALIDATION_HA2.md": "independent_validation.md"}
 
@@ -38,6 +39,7 @@ def main():
               lambda f: f.suffix in (".py", ".sh") and f.name not in EXCLUDE_C1)
     copy_tree(ROOT / "src" / "paper", REL / "src" / "paper", lambda f: f.suffix == ".py")
     copy_tree(ROOT / "src" / "validate_ha2", REL / "src" / "validate_ha2", lambda f: f.suffix == ".py")
+    copy_tree(ROOT / "src" / "validate_c1", REL / "src" / "validate_c1", lambda f: f.name == "part10b.py")
     (REL / "results").mkdir(parents=True, exist_ok=True)
     missing = [r for r in RESULTS if not (ROOT / "results" / r).exists()]
     assert not missing, missing

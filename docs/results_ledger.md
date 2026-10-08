@@ -541,3 +541,14 @@ Disclose: MV Eriksson coverage 44 % incl. MainLn8-14 (no remote end; 47 % on the
 validator 27.43 vs lead 27.27 (+0.16 pp, float32 vs 5-digit Z); A1 raw-window boosting 38.85 = 38.85 (bit-identical).
 SUPERSEDED: results/c1_zs_MV.csv row A3_unnormalised = 29.53 (old clipped definition) -> never quote; paper uses
 c1_ablation_a3_fixed.csv (27.27). Disclose: A1 on MV is a near-constant predictor (~0.83), worse than predicting 0.5.
+
+## PROFESSOR REVISION ANALYSES (design s.26/26a, 2026-10-08) - [V] validator part 10b PASS (a 2e-6, b 0.034, c 4e-15 pp)
+(a) Two-ended learners, MAE % mean of 3 seeds (TD: DL 0.61, TG 0.41, MV 4.00 | excl d=0.5: 0.59, 0.39, 2.39):
+  P (u,w of Eq.3): MLP 0.39/0.80/3.64, GRU 0.25/0.49/3.96 (TG->DL / DL->TG / DL+TG->MV); excl d=0.5 best 0.27/0.49/2.05.
+  Z (raw 12 ch + Z): MLP 2.82/8.23/34.54, GRU 3.67/8.60/39.67.
+  Wording rule 26(a): best learner NOT >= 2x TD on any set -> "comparable", title "equal terminals". Learner beats TD on DL.
+(b) TD white noise (SG): DL 0.61 -> 0.94 (40 dB) -> 1.28 (30 dB); TG 0.41 -> 0.73 -> 1.05. Rise <= 1.0 pp -> robust (s.22 rule).
+(c) d = 0.5: 21 % of DL/TG windows (23 % MV), 100 % of incipient+HIF. Excl: TD 0.59/0.39/2.39; PFB 8.29/11.38/34.82;
+  Eriksson 11.96/10.03/29.29; best eq net 11.30/15.81; PFB reduction 27/28 % (was 33/35). Rankings unchanged.
+  PFB on inc+HIF vs SC: DL 4.27 vs 7.75, TG 3.32 vs 10.64. Eriksson undefined AND y=0.5: 3.6 % (DL, TG), 13.8 % MV.
+Files: results/c1_two_end_learn*.{csv,parquet}, c1_prof_m6*.csv, validate_part10b.csv; src/c1/two_end_*.py, prof_m6.py.

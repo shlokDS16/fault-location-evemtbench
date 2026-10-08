@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this code or these results, please cite the paper and this archive."
-title: "Code and results: where learning helps in impedance-based fault location"
+title: "Code and results: learned and classical impedance-based fault location"
 authors:
   - family-names: Goenka
     given-names: Shlok
@@ -11,7 +11,7 @@ authors:
     affiliation: "School of Computer Science and Engineering, Vellore Institute of Technology, Vellore, India"
     email: ganesh.khekare@vit.ac.in
 license: MIT
-date-released: 2026-10-06
+date-released: 2026-10-08
 keywords:
   - fault location
   - impedance-based methods
