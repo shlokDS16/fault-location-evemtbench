@@ -409,3 +409,27 @@ Validation: validator part 10b (claudedocs/validator_spec_part10b.md) re-impleme
 ### the two-ended learners seen yet): the d = 0.5 exclusion of 26(c) is also applied to the 26(a) learners (same rule,
 ### per seed then averaged) and to the TD locator on the same test sets, because the new rows enter Table II. Also
 ### reported for them: MAE on incipient + HIF windows vs short circuits. Report-only; no wording rule changes.
+## 27. SECOND PROFESSOR ROUND (2026-10-09), REPORT-ONLY, fixed BEFORE any of these numbers was computed.
+Scoring and bootstrap as s.25 (B = 2,000 episode resamples, default_rng(0), percentile 95 % CI).
+(a) CI of the s.26(a) physical-input networks: per window, error of each seed averaged over seeds 0-2 (best cell of
+    s.26 per test set), episode-bootstrap CI on DL, TG, MV two-ended set.
+(b) Calibrated-ratio baseline: d^ = a + b * td2_est, (a, b) by ordinary least squares on the training grid(s) of the
+    same direction (TG->DL, DL->TG, DL+TG->MV), clipped [0, 1]. Report MAE and CI. Purpose: show what a learned linear
+    map on the physics ratio gives, without any network.
+(c) Shortcut test for the mid-line artefact: on windows with true d = 0.5 only, PFB (cross-grid, as Table III) MAE and
+    share of predictions within 0.02 of 0.5, separately for incipient+HIF and for short circuits, DL and TG. Rule:
+    "learners exploit" is kept only if incipient+HIF windows at d = 0.5 have MAE <= half that of short circuits at
+    d = 0.5 AND a larger share within 0.02; otherwise the text says "may exploit".
+(d) Feeder-trained PFB on CIGRE MV: episode split (unique sim_idx permuted with default_rng(0); 30 % test episodes),
+    ALLOW features, ha2_eval.PARAMS, seeds 0-2 averaged; MAE + CI on the test windows; constant-prediction (training
+    median) and Eriksson on the same test windows for reference. Wording rule: if feeder-trained PFB MAE < 0.5 x the
+    constant prediction, Sec. VI-C/VII-A say the failure is mainly a transfer problem; otherwise that same-grid
+    training does not make one-ended location usable on the feeder.
+## 28. PHYSICAL-INPUT NETWORKS THROUGH THE MEASUREMENT CHAIN (professor round 2), REPORT-ONLY, fixed 2026-10-09 before
+## any run. Scenarios of s.22 exactly as in src/c1/chain_pass.py (same chain code, both ends, before windowing):
+CT-severe, CVT-5, CVT-15, FULL; directions TG->DL and DL->TG only (as Table VI). Networks: the s.26(a) 'P' input (u, w
+from the DISTORTED records, nameplate R1, L1, SG 11/2, per-window joint-RMS scaling), MLP and GRU, seeds 0-2, trained
+on CLEAN source-grid windows (identical recipe and training data as s.26(a); retraining with the same seeds is
+allowed if the s.26 models were not saved), tested on the distorted target grid. Report MAE (seed mean) per
+(model, direction, scenario) and the clean MAE reproduced (must match s.26(a) within 0.05 pp, else report).
+Reference: two-ended TD locator under the same scenarios (results/c1_chain_eval.csv). No wording rule beyond s.22.

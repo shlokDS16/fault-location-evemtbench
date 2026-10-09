@@ -43,3 +43,36 @@ def m6_macros(R, put):
     for st, k in (("DL", "DL"), ("TG", "TG")):
         eq = m[(st, "best MLP/GRU equal inform.")]
         put(f"eqX{k}", eq); put(f"redX{k}", 100 * (1 - m[(st, "PFB")] / eq), 0)
+
+
+def prof2_macros(R, put):
+    """Design section 27 (second professor round): results/c1_prof2.csv."""
+    d = pd.read_csv(R / "c1_prof2.csv").set_index(["part", "set", "method"])
+    for st in ("DL", "TG", "MV"):
+        r = d.xs(("a", st), level=("part", "set")).iloc[0]
+        put(f"lrnPlo{st}", r.lo); put(f"lrnPhi{st}", r.hi)
+        put(f"calR{st}", d.loc[("b", st, "calibrated ratio"), "mae"])
+    for st in ("DL", "TG"):
+        a, b = d.loc[("c", st, "inc+HIF at d=0.5")], d.loc[("c", st, "short circuit at d=0.5")]
+        put(f"halfHif{st}", a.mae); put(f"halfSc{st}", b.mae)
+        put(f"halfHifNear{st}", a.share_within_002, 0); put(f"halfScNear{st}", b.share_within_002, 0)
+    f = d.loc[("d", "MV", "PFB feeder-trained")]
+    put("mvSame", f.mae); put("mvSamelo", f.lo); put("mvSamehi", f.hi)
+    put("mvSameTrainEp", int(f.n_train_ep)); put("mvSameTestEp", int(f.n_test_ep))
+    put("mvSameConst", d.loc[("d", "MV", "constant (train median)"), "mae"])
+    put("mvSameE", d.loc[("d", "MV", "Eriksson (same windows)"), "mae"])
+    put("mvSameZs", d.loc[("d", "MV", "PFB 110 kV-trained (same windows)"), "mae"])
+
+
+def chain2_macros(R, put):
+    """Design section 28: physical-input GRU (best clean model in both directions) under the measurement chain."""
+    c = pd.read_csv(R / "c1_two_end_chain.csv")
+    p = pd.read_parquet(R / "c1_two_end_chain_preds.parquet", engine="fastparquet")
+    p = p.assign(e=(np.clip(p.pred, 0, 1) - p.y).abs() * 100)
+    chk = p.groupby(["model", "direction", "scenario", "seed"]).e.mean()
+    ref = c.set_index(["model", "direction", "scenario", "seed"]).mae
+    assert np.allclose(chk.loc[ref.index], ref, atol=1e-6)  # re-scored predictions = stored MAE
+    m = ref.groupby(level=["model", "direction", "scenario"]).mean()
+    for d, k in (("TG_to_DL", "DL"), ("DL_to_TG", "TG")):
+        for sc, sk in (("CVT-15", "CVTfifteen"), ("FULL", "Full")):
+            put(f"netCh{sk}{k}", m[("GRU", d, sc)])

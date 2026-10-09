@@ -93,6 +93,9 @@ for G in DoubleLine TestGrid110kV CigreMVGrid; do EVEMT_GRID=$G python src/c1/tw
 python src/c1/two_end_learn.py
 python src/c1/prof_m6.py
 python src/validate_c1/part10b.py   # independent re-implementation of s.26
+python src/c1/prof2.py               # s.27: CIs, calibrated ratio, mid-line test, feeder-trained PFB
+python src/validate_c1/part11.py     # independent re-implementation of s.27
+python src/c1/two_end_chain.py       # s.28: physical-input networks through the measurement chain (GPU)
 # 9. numbers, figures and the Word review copy of the paper
 python src/paper/grid_topology.py
 python src/paper/make_macros.py

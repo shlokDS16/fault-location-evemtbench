@@ -552,3 +552,9 @@ c1_ablation_a3_fixed.csv (27.27). Disclose: A1 on MV is a near-constant predicto
   Eriksson 11.96/10.03/29.29; best eq net 11.30/15.81; PFB reduction 27/28 % (was 33/35). Rankings unchanged.
   PFB on inc+HIF vs SC: DL 4.27 vs 7.75, TG 3.32 vs 10.64. Eriksson undefined AND y=0.5: 3.6 % (DL, TG), 13.8 % MV.
 Files: results/c1_two_end_learn*.{csv,parquet}, c1_prof_m6*.csv, validate_part10b.csv; src/c1/two_end_*.py, prof_m6.py.
+
+## SECOND PROFESSOR ROUND (design s.27, 2026-10-09) - [V] validator part 11 PASS (max dev 0.0 pp)
+(a) P-net CIs: DL 0.252 [0.242, 0.263], TG 0.494 [0.469, 0.526], MV 3.637 [3.341, 3.934].
+(b) calibrated ratio (a + b td2): DL 0.656, TG 0.547, MV 3.999 (b ~ 1.00) vs TD 0.612 / 0.411 / 4.003.
+(c) d=0.5 only, PFB: inc+HIF 4.27 (DL) / 3.32 (TG) vs SC 5.59 / 7.66; within 0.02: 67/43 % vs 38/28 %. Rule: TG only -> "may exploit".
+(d) MV same-grid PFB (30 % test episodes, rng 0): 17.67 [16.86, 18.54]; same windows: 110 kV-trained 32.64, Eriksson 24.28, constant 30.60.
